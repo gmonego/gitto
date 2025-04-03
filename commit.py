@@ -12,10 +12,23 @@ class Commit:
             content = index.read()
             if len(content) > 0:
 
-                files = list(Path(".gitto/commits").glob("*"))
-                if files:
-                    last_commit = max(files, key=lambda f: f.stat().st_mtime)
-                    last_commit = last_commit.name
+                head_path = Path(".gitto/HEAD")
+                if head_path.exists():
+                    with open(head_path, "r") as head_file:
+                        head_content = head_file.read().strip()
+                
+                    if head_content.startswith("ref:"):
+                        branch_ref = head_content.split(" ")[1]
+                        branch_path = Path(f".gitto/{branch_ref}")
+
+                        if branch_path.exists():
+                            with open(branch_path, "r") as branch_file:
+                                last_commit = branch_file.read().strip()
+                        
+                        else:
+                            last_commit = None
+                    else:
+                        last_commit = head_content
                 else:
                     last_commit = None
 
@@ -28,6 +41,9 @@ class Commit:
                 
                 hash_obj = hashlib.sha256(commit_metadata.encode())
                 hash_hex_commit= hash_obj.hexdigest()
+
+                with open(".gitto/refs/heads/main", "w") as head:
+                    head.write(hash_hex_commit)
 
                 trees = list(Path(".gitto/trees").glob("*"))
                 try:
